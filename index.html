@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizX Arena</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at top left, #1a4d6d 0%, #0a0e27 50%, #1a0d3e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 191, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .container {
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 191, 255, 0.3);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 191, 255, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            background: linear-gradient(90deg, #00bfff 0%, #667eea 50%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 3.5em;
+            margin: 10px 0;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.2em;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(0, 191, 255, 0.2);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00bfff, #667eea, #a855f7);
+            border-radius: 10px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            color: #00bfff;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .question-card {
+            background: linear-gradient(135deg, rgba(0, 191, 255, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+            border: 1px solid rgba(0, 191, 255, 0.3);
+            padding: 30px;
+            border-radius: 16px;
+            margin: 30px 0;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .question-number {
+            color: #00bfff;
+            font-weight: 700;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .question-text {
+            font-size: 1.4em;
+            color: #e2e8f0;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .options {
+            display: grid;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .option {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(0, 191, 255, 0.3);
+            padding: 18px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            color: #cbd5e1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 191, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .option:hover::before {
+            left: 100%;
+        }
+
+        .option:hover {
+            transform: translateY(-2px);
+            border-color: #00bfff;
+            box-shadow: 0 8px 20px rgba(0, 191, 255, 0.3);
+            background: rgba(0, 191, 255, 0.1);
+        }
+
+        .option.selected {
+            border-color: #00bfff;
+            background: rgba(0, 191, 255, 0.2);
+            transform: scale(1.02);
+            color: #fff;
+        }
+
+        .option.correct {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+            animation: pulse 0.5s;
+            color: #fff;
+        }
+
+        .option.wrong {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+            animation: shake 0.5s;
+            color: #fff;
+        }
+
+        .option.disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .btn {
+            background: linear-gradient(90deg, #00bfff 0%, #667eea 50%, #a855f7 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 4px 20px rgba(0, 191, 255, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 191, 255, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-screen {
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .score-circle {
+            width: 220px;
+            height: 220px;
+            margin: 30px auto;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00bfff 0%, #667eea 50%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            box-shadow: 0 15px 40px rgba(0, 191, 255, 0.5);
+            animation: scaleIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+        }
+
+        .score-circle::before {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            background: rgba(10, 14, 39, 0.9);
+        }
+
+        .score-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes scaleIn {
+            0% { transform: scale(0) rotate(-180deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .score-number {
+            font-size: 3.5em;
+            font-weight: 700;
+        }
+
+        .score-label {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .feedback-message {
+            font-size: 2em;
+            background: linear-gradient(90deg, #00bfff 0%, #667eea 50%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+            font-weight: 700;
+        }
+
+        .start-screen {
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+            padding: 40px 0;
+        }
+
+        .start-icon {
+            font-size: 5em;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 2.5em;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            .question-text {
+                font-size: 1.2em;
+            }
+
+            .option {
+                padding: 15px 18px;
+                font-size: 1em;
+            }
+
+            .score-circle {
+                width: 180px;
+                height: 180px;
+            }
+
+            .score-number {
+                font-size: 2.8em;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(0, 191, 255, 0.5); }
+            50% { text-shadow: 0 0 30px rgba(0, 191, 255, 0.8), 0 0 40px rgba(168, 85, 247, 0.4); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Start Screen -->
+        <div id="startScreen" class="start-screen">
+            <div class="header">
+                <h1 class="glow">QuizX Arena</h1>
+                <p class="subtitle">Test your brain. Beat the timer. Rule the leaderboard.</p>
+            </div>
+            <button class="btn" onclick="startQuiz()">Start Game</button>
+            <div class="footer">© 2025 QuizX Arena</div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="hidden">
+            <div class="header">
+                <h1>QuizX Arena</h1>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">0% Complete</div>
+
+            <div class="question-card" id="questionCard">
+                <div class="question-number" id="questionNumber"></div>
+                <div class="question-text" id="questionText"></div>
+            </div>
+
+            <div class="options" id="optionsContainer"></div>
+
+            <button class="btn" id="submitBtn" onclick="handleSubmit()" disabled>Submit Answer</button>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" class="hidden result-screen">
+            <div class="header">
+                <h1>QuizX Arena</h1>
+            </div>
+            
+            <div class="score-circle" id="scoreCircle">
+                <div class="score-content">
+                    <div class="score-number" id="scoreNumber">0</div>
+                    <div class="score-label">out of <span id="totalQuestions">0</span></div>
+                </div>
+            </div>
+            <div class="feedback-message" id="feedbackMessage"></div>
+            <p class="subtitle">Keep challenging yourself and dominate the arena!</p>
+            <button class="btn" onclick="resetQuiz()">Play Again 🔄</button>
+        </div>
+    </div>
+
+    <!-- Sound Effects -->
+    <audio id="correctSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYJGWi77eecTgwMUKfj8LZjHAU5kte=" type="audio/wav">
+    </audio>
+    <audio id="wrongSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAAB/fn18e3p5eHd2dXRzcnFwb25tbGtqaWhnZmVkY2JhYF9eXVxbWllYV1ZVVFNSUVBPTk1MS0pJSEdGRUNCP0A+PTw7Ojk4NzY1NDMyMTAvLi0sKyopKCcmJSQjIiEgHx4dHBsaGRgXFhUUExIREA8ODQwLCgkI" type="audio/wav">
+    </audio>
+
+    <script>
+        const questions = [
+            {
+                question: "What is the capital of France?",
+                options: ["London", "Berlin", "Paris", "Madrid"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which planet is known as the Red Planet?",
+                options: ["Venus", "Mars", "Jupiter", "Saturn"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is 2 + 2?",
+                options: ["3", "4", "5", "6"],
+                correctAnswer: 1
+            },
+            {
+                question: "Who painted the Mona Lisa?",
+                options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Michelangelo"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the largest ocean on Earth?",
+                options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+                correctAnswer: 3
+            },
+            {
+                question: "Which element has the chemical symbol 'O'?",
+                options: ["Gold", "Oxygen", "Silver", "Iron"],
+                correctAnswer: 1
+            },
+            {
+                question: "What year did World War II end?",
+                options: ["1943", "1944", "1945", "1946"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many continents are there?",
+                options: ["5", "6", "7", "8"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the smallest prime number?",
+                options: ["0", "1", "2", "3"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which country is home to the kangaroo?",
+                options: ["New Zealand", "Australia", "South Africa", "Brazil"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the speed of light?",
+                options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"],
+                correctAnswer: 0
+            },
+            {
+                question: "Who wrote 'Romeo and Juliet'?",
+                options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the capital of Japan?",
+                options: ["Seoul", "Beijing", "Tokyo", "Bangkok"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many sides does a hexagon have?",
+                options: ["5", "6", "7", "8"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the chemical formula for water?",
+                options: ["CO2", "H2O", "O2", "NaCl"],
+                correctAnswer: 1
+            },
+            {
+                question: "Who invented the telephone?",
+                options: ["Thomas Edison", "Nikola Tesla", "Alexander Graham Bell", "Albert Einstein"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the tallest mountain in the world?",
+                options: ["K2", "Mount Everest", "Kilimanjaro", "Mount Fuji"],
+                correctAnswer: 1
+            },
+            {
+                question: "Which gas do plants absorb from the atmosphere?",
+                options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the square root of 144?",
+                options: ["10", "11", "12", "13"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which ocean is the smallest?",
+                options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many degrees are in a right angle?",
+                options: ["45", "90", "180", "360"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the currency of the United Kingdom?",
+                options: ["Euro", "Dollar", "Pound Sterling", "Yen"],
+                correctAnswer: 2
+            },
+            {
+                question: "Who was the first person to walk on the moon?",
+                options: ["Buzz Aldrin", "Neil Armstrong", "Yuri Gagarin", "John Glenn"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the hardest natural substance on Earth?",
+                options: ["Gold", "Iron", "Diamond", "Platinum"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many colors are in a rainbow?",
+                options: ["5", "6", "7", "8"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the boiling point of water at sea level?",
+                options: ["50°C", "75°C", "100°C", "125°C"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which planet is closest to the Sun?",
+                options: ["Venus", "Mercury", "Earth", "Mars"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the longest river in the world?",
+                options: ["Amazon", "Nile", "Yangtze", "Mississippi"],
+                correctAnswer: 1
+            },
+            {
+                question: "How many bones are in the adult human body?",
+                options: ["186", "206", "226", "246"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the capital of Australia?",
+                options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which vitamin is produced when skin is exposed to sunlight?",
+                options: ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"],
+                correctAnswer: 3
+            },
+            {
+                question: "What is the largest mammal in the world?",
+                options: ["African Elephant", "Blue Whale", "Giraffe", "Polar Bear"],
+                correctAnswer: 1
+            },
+            {
+                question: "How many strings does a standard guitar have?",
+                options: ["4", "5", "6", "7"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the freezing point of water?",
+                options: ["-10°C", "0°C", "10°C", "32°C"],
+                correctAnswer: 1
+            },
+            {
+                question: "Which country is known as the Land of the Rising Sun?",
+                options: ["China", "Japan", "Thailand", "South Korea"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the main ingredient in guacamole?",
+                options: ["Tomato", "Avocado", "Pepper", "Onion"],
+                correctAnswer: 1
+            },
+            {
+                question: "How many players are on a soccer team?",
+                options: ["9", "10", "11", "12"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the smallest country in the world?",
+                options: ["Monaco", "Vatican City", "San Marino", "Liechtenstein"],
+                correctAnswer: 1
+            },
+            {
+                question: "Which organ pumps blood through the body?",
+                options: ["Brain", "Heart", "Lungs", "Liver"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the capital of Canada?",
+                options: ["Toronto", "Vancouver", "Ottawa", "Montreal"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many hours are in a day?",
+                options: ["12", "24", "36", "48"],
+                correctAnswer: 1
+            },
+            {
+                question: "Which metal is liquid at room temperature?",
+                options: ["Iron", "Mercury", "Silver", "Gold"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the largest desert in the world?",
+                options: ["Sahara", "Arabian", "Antarctic", "Gobi"],
+                correctAnswer: 2
+            },
+            {
+                question: "How many minutes are in an hour?",
+                options: ["30", "45", "60", "90"],
+                correctAnswer: 2
+            },
+            {
+                question: "Which animal is known as the King of the Jungle?",
+                options: ["Tiger", "Lion", "Elephant", "Bear"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the main language spoken in Brazil?",
+                options: ["Spanish", "Portuguese", "English", "French"],
+                correctAnswer: 1
+            },
+            {
+                question: "How many teeth does an adult human have?",
+                options: ["28", "30", "32", "34"],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the largest planet in our solar system?",
+                options: ["Saturn", "Jupiter", "Neptune", "Uranus"],
+                correctAnswer: 1
+            },
+            {
+                question: "Which bird is known for its ability to mimic human speech?",
+                options: ["Eagle", "Parrot", "Owl", "Crow"],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the sum of the angles in a triangle?",
+                options: ["90 degrees", "180 degrees", "270 degrees", "360 degrees"],
+                correctAnswer: 1
+            }
+        ];
+
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOption = null;
+        let hasSubmitted = false;
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function startQuiz() {
+            currentQuestions = shuffleArray(questions).slice(0, 10);
+            currentQuestionIndex = 0;
+            score = 0;
+            selectedOption = null;
+            hasSubmitted = false;
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('quizScreen').classList.remove('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            hasSubmitted = false;
+            selectedOption = null;
+            
+            const question = currentQuestions[currentQuestionIndex];
+            const progress = ((currentQuestionIndex) / currentQuestions.length) * 100;
+
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = Math.round(progress) + '% Complete';
+            document.getElementById('questionNumber').textContent = `Question ${currentQuestionIndex + 1} of ${currentQuestions.length}`;
+            document.getElementById('questionText').textContent = question.question;
+
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+
+            question.options.forEach((option, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.textContent = option;
+                optionDiv.onclick = () => selectOption(index);
+                optionsContainer.appendChild(optionDiv);
+            });
+
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Submit Answer';
+        }
+
+        function selectOption(index) {
+            if (hasSubmitted) return;
+
+            selectedOption = index;
+            const options = document.querySelectorAll('.option');
+            options.forEach((opt, i) => {
+                opt.classList.remove('selected');
+                if (i === index) {
+                    opt.classList.add('selected');
+                }
+            });
+
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function handleSubmit() {
+            if (hasSubmitted) {
+                // Move to next question
+                currentQuestionIndex++;
+                if (currentQuestionIndex < currentQuestions.length) {
+                    loadQuestion();
+                } else {
+                    showResults();
+                }
+                return;
+            }
+
+            hasSubmitted = true;
+            const question = currentQuestions[currentQuestionIndex];
+            const options = document.querySelectorAll('.option');
+
+            options.forEach((opt, i) => {
+                opt.classList.add('disabled');
+                if (i === question.correctAnswer) {
+                    opt.classList.add('correct');
+                }
+                if (i === selectedOption && selectedOption !== question.correctAnswer) {
+                    opt.classList.add('wrong');
+                }
+            });
+
+            if (selectedOption === question.correctAnswer) {
+                score++;
+                document.getElementById('correctSound').play();
+            } else {
+                document.getElementById('wrongSound').play();
+            }
+
+            document.getElementById('submitBtn').textContent = currentQuestionIndex === currentQuestions.length - 1 ? 'See Results' : 'Next Question';
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function showResults() {
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            const percentage = (score / currentQuestions.length) * 100;
+            document.getElementById('scoreNumber').textContent = score;
+            document.getElementById('totalQuestions').textContent = currentQuestions.length;
+
+            let message = '';
+            if (percentage >= 90) {
+                message = '🎉 Outstanding! 🎉';
+            } else if (percentage >= 75) {
+                message = '🌟 Excellent Work! 🌟';
+            } else if (percentage >= 50) {
+                message = '👍 Good Job! 👍';
+            } else {
+                message = '💪 Keep Practicing! 💪';
+            }
+
+            document.getElementById('feedbackMessage').textContent = message;
+
+            // Animate score counter
+            let current = 0;
+            const interval = setInterval(() => {
+                current++;
+                document.getElementById('scoreNumber').textContent = current;
+                if (current >= score) {
+                    clearInterval(interval);
+                }
+            }, 100);
+
+            // Confetti for scores above 75%
+            if (percentage >= 75) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#00bfff', '#667eea', '#a855f7']
+                });
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 50,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: ['#00bfff', '#667eea', '#a855f7']
+                    });
+                    confetti({
+                        particleCount: 50,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: ['#00bfff', '#667eea', '#a855f7']
+                    });
+                }, 250);
+            }
+        }
+
+        function resetQuiz() {
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
